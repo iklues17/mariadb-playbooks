@@ -1,0 +1,55 @@
+---
+- name: Set Root MariaDB Password Without Root Password (Error Can Be Ignored) for Slave
+  mysql_user: 
+    login_user={{ item[0].root_user }} 
+    login_password=""  
+    login_host={{ ansible_fqdn }} 
+    host={{ item[1] }} 
+    name={{ item[0].root_user }} 
+    password={{ item[0].root_password }} 
+    priv={{ item[0].root_priv }}
+  with_nested:
+    - ["{{ mariadb_info }}"]
+    - "{{ ['localhost', '%'] }}"
+  ignore_errors: true
+
+- name: Set User MariaDB Password With Privilege for Slave
+  mysql_user: login_user={{ item[0].root_user }} login_password={{ item[0].root_password }} host={{ item[1] }} name={{ item[0].user }} password={{ item[0].user_password }} priv={{ item[0].user_priv }}
+  with_nested:
+    - ["{{ mariadb_info }}"]
+    - "{{ ['localhost', '%'] }}"
+
+- name: Set Replication User MariaDB Password With Privilege for Slave
+  mysql_user: login_user={{ item[0].root_user }} login_password={{ item[0].root_password }} host={{ item[1] }} name={{ item[0].rpluser }} password={{ item[0].rpluser_password }} priv={{ item[0].rpluser_priv }}
+  with_nested:
+    - ["{{ mariadb_info }}"]
+    - "{{ ['localhost', '%'] }}"
+  when: mariadb_ha and ansible_fqdn in groups['mariadb']
+
+- name: Set Replication root for Slave node
+  mysql_user: login_user={{ item[0].root_user }} login_password="{{ item[0].root_password }}" host={{ item[1] }} name={{ item[0].root_user }} password="" priv={{ item[0].root_priv }}
+  with_nested:
+    - ["{{ mariadb_info }}"]
+    - "{{ groups['mariadb'][0] }}"
+  when: mariadb_ha and ansible_fqdn in groups['mariadb'] and ansible_fqdn != groups['mariadb'][0]
+
+- name: Delete user with NULL password for security
+  mysql_user: login_user={{ item.root_user }} login_password=""  login_host={{ ansible_fqdn }} host={{ ansible_fqdn }} name={{ item.root_user }} password="" state=absent
+  with_items:
+    - "{{ mariadb_info }}"
+  when: mariadb_ha and ansible_fqdn in groups['mariadb'] and ansible_fqdn != groups['mariadb'][0]
+
+### delete user - Error_code: 1032; handler error HA_ERR_KEY_NOT_FOUND
+- name: Delete user with null User for security
+  mysql_user: login_user={{ item.root_user }} login_password="{{ item.root_password }}" host={{ ansible_fqdn }} name="" password="" state=absent
+  with_items:
+    - ["{{ mariadb_info }}"]
+  when: ansible_fqdn in groups['mariadb']
+
+- name: Copy Sql For reset master
+  template: src=reset_master.sql dest=/tmp/mysql-install/
+  when: ansible_fqdn in groups['mariadb']
+
+- name: Delete All Binary Log
+  mysql_db: login_user={{ mariadb_info.root_user }} login_password={{ mariadb_info.root_password }} name=mysql state=import target=/tmp/mysql-install/reset_master.sql
+  when: ansible_fqdn in groups['mariadb']

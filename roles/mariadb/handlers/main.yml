@@ -1,0 +1,9 @@
+---
+- name: restart mysql
+  service: name=mysql state=restarted enabled=yes
+
+- name: restart replication-manager
+  service: name=replication-manager state=restarted enabled=yes
+
+- name: restart xinetd
+  service: name=xinetd state=restarted

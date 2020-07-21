@@ -1,0 +1,20 @@
+---
+# Stop MariaDB
+- hosts: mariadb:replication_manager
+  user: root
+  max_fail_percentage: 0
+  vars_files:
+    - group_vars/mariadb.yml
+
+  tasks:
+    - name:  Stop MariaDB Service for Slave
+      service: name=mysql state=stopped
+      when: mariadb_ha and ansible_fqdn in groups['mariadb'] and ansible_fqdn != groups['mariadb'][0]
+
+    - name:  Stop MariaDB Service
+      service: name=mysql state=stopped
+      when: ansible_fqdn == groups['mariadb'][0]
+
+    - name: Stop Replication Manager
+      service: name=replication-manager state=stopped
+      when: mariadb_ha and ansible_fqdn in groups['replication_manager']

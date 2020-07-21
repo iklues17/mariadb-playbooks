@@ -1,0 +1,16 @@
+---
+- include: yum.yml
+
+- include: package.yml
+
+- include: file.yml
+- meta: flush_handlers
+
+- include: user_for_replication.yml
+  when: mariadb_ha and ansible_fqdn in groups['mariadb']
+
+- include: init.yml
+  when: mariadb_ha and ansible_fqdn in groups['mariadb']
+
+- include: user.yml
+  when: ansible_fqdn == groups['mariadb'][0]

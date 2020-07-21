@@ -1,0 +1,24 @@
+---
+- name: Install MariaDB Server
+  yum: pkg={{ item }} state=latest
+  with_items:
+    - MariaDB-server
+    - MySQL-python
+  when: ansible_fqdn in groups['mariadb']
+
+- name: Install MariaDB Client
+  yum: pkg={{ item }} state=latest
+  with_items:
+    - MariaDB-client
+
+- name: Install xinetd
+  yum: pkg={{ item }} state=latest
+  with_items:
+    - xinetd
+  when: mariadb_ha and ansible_fqdn in groups['mariadb']
+
+- name: Install MariaDB Replication Manager
+  yum: pkg={{ item }} state=latest
+  with_items:
+    - replication-manager
+  when: ansible_fqdn in groups['replication_manager']

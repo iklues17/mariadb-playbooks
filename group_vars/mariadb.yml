@@ -1,0 +1,20 @@
+---
+# mariadb rpm repository
+mariadb_repo_url: "http://yum.mariadb.org/10.1/centos/$releasever/$basearch"
+# use mariadb cluster
+mariadb_ha: "{{ groups['mariadb']|length > 1 }}"
+
+# nexr rpm repository
+nexr_repo_url: "http://14.63.216.163/repo/"
+
+mariadb_info:
+  port: 3306
+  root_user: root
+  root_password: nexr1234~
+  root_priv: "*.*:ALL,GRANT"
+  user: ndap
+  user_password: nexr1234~
+  user_priv: "*.*:ALL,GRANT"
+  rpluser: rpl_user
+  rpluser_password: nexr1234~
+  rpluser_priv: "*.*:ALL,GRANT"

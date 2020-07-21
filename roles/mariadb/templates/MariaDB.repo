@@ -1,0 +1,12 @@
+[mariadb]
+name = MariaDB
+baseurl = {{ mariadb_repo_url }}
+enabled=1
+gpgcheck=0
+
+[nexr-extra]
+name=nexr-extra
+enabled=1
+gpgcheck=0
+baseurl={{ nexr_repo_url }}nexr-extra/$releasever
+priority=2

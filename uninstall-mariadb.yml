@@ -1,0 +1,11 @@
+---
+- include: stop-mariadb.yml
+
+- hosts: mariadb:replication_manager
+  user: root
+  max_fail_percentage: 0
+  vars_files:
+    - group_vars/mariadb.yml
+
+  tasks:
+  - include: roles/mariadb/tasks/uninstall.yml

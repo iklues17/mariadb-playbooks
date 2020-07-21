@@ -1,0 +1,65 @@
+---
+- name: Set Root MariaDB Password Without Root Password (Error Can Be Ignored)
+  mysql_user: login_user={{ item[0].root_user }} login_password=""  login_host={{ ansible_fqdn }} host={{ item[1] }} name={{ item[0].root_user }} password={{ item[0].root_password }} priv={{ item[0].root_priv }}
+  with_nested:
+    - ["{{ mariadb_info }}"]
+    - "{{ [ansible_hostname, ansible_fqdn, '127.0.0.1', 'localhost' ] }}"
+  ignore_errors: true
+
+- name: Set Root MariaDB Password Without Root Password for nodes (Error Can Be Ignored)
+  mysql_user: login_user={{ item[0].root_user }} login_password=""  login_host={{ ansible_fqdn }} host={{ item[1] }} name={{ item[0].root_user }} password={{ item[0].root_password }} priv={{ item[0].root_priv }}
+  with_nested:
+    - ["{{ mariadb_info }}"]
+    - "{{ groups['all'] }}"
+  ignore_errors: true
+
+- name: Set Root MariaDB Password With Root Password (Error Can Be Ignored)
+  mysql_user: login_user={{ item[0].root_user }} login_password={{ item[0].root_password }}  login_host={{ ansible_fqdn }} host={{ item[1] }} name={{ item[0].root_user }} password={{ item[0].root_password }} priv={{ item[0].root_priv }}
+  with_nested:
+    - ["{{ mariadb_info }}"]
+    - "{{ [ansible_hostname, ansible_fqdn, '127.0.0.1', 'localhost' ] }}"
+  ignore_errors: true
+
+- name: Set Root MariaDB Password With Root Password for nodes (Error Can Be Ignored)
+  mysql_user: login_user={{ item[0].root_user }} login_password={{ item[0].root_password }}  login_host={{ ansible_fqdn }} host={{ item[1] }} name={{ item[0].root_user }} password={{ item[0].root_password }} priv={{ item[0].root_priv }}
+  with_nested:
+    - ["{{ mariadb_info }}"]
+    - "{{ groups['all'] }}"
+  ignore_errors: true
+
+- name: Set User MariaDB Password With Privilege
+  mysql_user: login_user={{ item[0].root_user }} login_password={{ item[0].root_password }}  host={{ item[1] }} name={{ item[0].user }} password={{ item[0].user_password }} priv={{ item[0].user_priv }}
+  with_nested:
+    - ["{{ mariadb_info }}"]
+    - "{{ [ansible_hostname, ansible_fqdn, '127.0.0.1', 'localhost' ] }}"
+
+- name: Set User MariaDB Password With Privilege for nodes
+  mysql_user: login_user={{ item[0].root_user }} login_password={{ item[0].root_password }}  host={{ item[1] }} name={{ item[0].user }} password={{ item[0].user_password }} priv={{ item[0].user_priv }}
+  with_nested:
+    - ["{{ mariadb_info }}"]
+    - "{{ groups['all'] }}"
+
+- name: Set Replication User MariaDB Password With Privilege
+  mysql_user: login_user={{ item[0].root_user }} login_password={{ item[0].root_password }}  host={{ item[1] }} name={{ item[0].rpluser }} password={{ item[0].rpluser_password }} priv={{ item[0].rpluser_priv }}
+  with_nested:
+    - ["{{ mariadb_info }}"]
+    - "{{ [ansible_hostname, ansible_fqdn, '127.0.0.1', 'localhost' ] }}"
+  when: mariadb_ha and ansible_fqdn in groups['mariadb']
+
+- name: Set Replication User MariaDB Password With Privilege for nodes
+  mysql_user: login_user={{ item[0].root_user }} login_password={{ item[0].root_password }}  host={{ item[1] }} name={{ item[0].rpluser }} password={{ item[0].rpluser_password }} priv={{ item[0].rpluser_priv }}
+  with_nested:
+    - ["{{ mariadb_info }}"]
+    - "{{ groups['all'] }}"
+  when: mariadb_ha and ansible_fqdn in groups['mariadb']
+
+- name: Copy Sql To Be Execute To Temp Mysql Directory
+  template: src=delete_anonymous_access_user.sql dest=/tmp/mysql-install/
+  when: ansible_fqdn == groups['mariadb'][0]
+
+- name: Delete User Account Without Password With Anonymous Host
+  mysql_db: login_user={{ mariadb_info.root_user }} login_password={{ mariadb_info.root_password }} name=mysql state=import target=/tmp/mysql-install/delete_anonymous_access_user.sql
+  when: ansible_fqdn == groups['mariadb'][0]
+
+- name: Delete Temp MariaDB Directory
+  file: path=/tmp/mysql-install state=absent

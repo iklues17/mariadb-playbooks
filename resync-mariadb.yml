@@ -1,0 +1,94 @@
+---
+# Resync Mariadb replication
+
+- hosts: mariadb:replication_manager
+  user: root
+  max_fail_percentage: 0
+
+  vars_files:
+    - group_vars/mariadb.yml
+
+  tasks:
+    - name: Check status of Slave
+      mysql_replication: mode=getslave login_user={{ mariadb_info.root_user }} login_password={{ mariadb_info.root_password }}
+      ignore_errors: true
+      register: slave_status
+      when: ansible_fqdn in groups['mariadb']
+
+    - name: Check status of Master
+      mysql_replication: mode=getmaster login_user={{ mariadb_info.root_user }} login_password={{ mariadb_info.root_password }}
+      ignore_errors: true
+      register: master_status
+      when: ansible_fqdn in groups['mariadb']
+
+    - name: Stop Slave
+      mysql_replication: mode=stopslave login_user={{ mariadb_info.root_user }} login_password={{ mariadb_info.root_password }}
+      when: >
+        ansible_fqdn in groups['mariadb']
+        and (slave_status.Is_Slave is defined and slave_status.Is_Slave)
+
+    - name: Reset Master BinLog
+      shell: /usr/bin/mysql -u{{ mariadb_info.root_user }} -p{{ mariadb_info.root_password }} -e "RESET MASTER;FLUSH TABLES WITH READ LOCK;"
+      when: >
+        ansible_fqdn in groups['mariadb']
+        and ((master_status.Is_Master is defined and master_status.Is_Master)
+        and (slave_status.Is_Slave is defined and not slave_status.Is_Slave))
+
+    - name: Mysql Dump From Master
+      mysql_db: login_user={{ mariadb_info.root_user }} login_password={{ mariadb_info.root_password }} state=dump name=all target=/tmp/mysql_dump.sql
+      when: >
+        ansible_fqdn in groups['mariadb']
+        and ((master_status.Is_Master is defined and master_status.Is_Master)
+        and (slave_status.Is_Slave is defined and not slave_status.Is_Slave))
+
+    - name: Unlock Table
+      shell: /usr/bin/mysql -u{{ mariadb_info.root_user }} -p{{ mariadb_info.root_password }} -e "UNLOCK TABLES;"
+      when: >
+        ansible_fqdn in groups['mariadb']
+        and ((master_status.Is_Master is defined and master_status.Is_Master)
+        and (slave_status.Is_Slave is defined and not slave_status.Is_Slave))
+
+    - name: Copy Mysql Dump From Master
+      fetch: src=/tmp/mysql_dump.sql dest=/tmp/mysql_dump.sql flat=yes
+      when: >
+        ansible_fqdn in groups['mariadb']
+        and ((master_status.Is_Master is defined and master_status.Is_Master)
+        and (slave_status.Is_Slave is defined and not slave_status.Is_Slave))
+
+    - name: Copy Mysql Dump
+      copy: src=/tmp/mysql_dump.sql dest=/tmp/mysql_dump.sql
+      when: >
+        ansible_fqdn in groups['mariadb']
+        and (slave_status.Is_Slave is defined and slave_status.Is_Slave)
+
+    - name: Restore DB To Slave
+      mysql_db: login_user={{ mariadb_info.root_user }} login_password={{ mariadb_info.root_password }} state=import name=all target=/tmp/mysql_dump.sql
+      when: >
+        ansible_fqdn in groups['mariadb']
+        and (slave_status.Is_Slave is defined and slave_status.Is_Slave)
+
+    - name: Reset Slave
+      shell: /usr/bin/mysql -u{{ mariadb_info.root_user }} -p{{ mariadb_info.root_password }} -e "RESET SLAVE;"
+      when: >
+        ansible_fqdn in groups['mariadb']
+        and (slave_status.Is_Slave is defined and slave_status.Is_Slave)
+
+    - name: Configure replication on the slave
+      mysql_replication:
+        mode: changemaster
+        master_host: "{{ groups['mariadb'][0] }}"
+        master_user: "{{ mariadb_info.rpluser }}"
+        master_password: "{{ mariadb_info.rpluser_password }}"
+        login_user: "{{ mariadb_info.root_user }}"
+        login_password: "{{ mariadb_info.root_password }}"
+      ignore_errors: True
+      when: >
+        ansible_fqdn in groups['mariadb']
+        and (slave_status.Is_Slave is defined and slave_status.Is_Slave)
+
+    - name: Start Slave
+      mysql_replication: mode=startslave login_user={{ mariadb_info.root_user }} login_password={{ mariadb_info.root_password }}
+      when: >
+        ansible_fqdn in groups['mariadb']
+        and (slave_status.Is_Slave is defined and slave_status.Is_Slave)
+

@@ -1,0 +1,12 @@
+---
+- name: Uninstall MariaDB Packages
+  yum: pkg={{ item }} state=absent
+  with_items:
+    - MariaDB-server
+    - MySQL-python
+
+- name: Uninstall MariaDB Replication Manager
+  yum: pkg={{ item }} state=absent
+  with_items:
+    - replication-manager
+  when: mariadb_ha

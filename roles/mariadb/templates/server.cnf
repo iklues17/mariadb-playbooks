@@ -1,0 +1,49 @@
+[client]
+default-character-set=utf8
+
+[server]
+
+[mysql]
+default-character-set=utf8
+
+[mysqld]
+collation-server=utf8_general_ci
+init-connect='SET NAMES utf8'
+character-set-server=utf8
+{% if mariadb_ha %}
+log_bin_trust_function_creators=1
+{% endif %}
+
+default-storage-engine = innodb
+
+[galera]
+
+[embedded]
+
+[mariadb]
+{% if mariadb_ha %}
+log-bin
+server_id={{ nodeid }}
+sync_binlog=1
+innodb_flush_log_at_trx_commit=1
+plugin_load = "semisync_master.so;semisync_slave.so"
+rpl_semi_sync_master_enabled=ON
+rpl_semi_sync_slave_enabled=ON
+loose_rpl_semi_sync_master_enabled = ON
+loose_rpl_semi_sync_slave_enabled = ON
+rpl_semi_sync_master_timeout = 10
+rpl_semi_sync_master_wait_point=AFTER_SYNC
+binlog-format=ROW
+binlog_annotate_row_events=ON
+replicate_annotate_row_events=ON
+log_slow_slave_statements=ON
+binlog_checksum=1
+slave_parallel_mode = optimistic
+slave_domain_parallel_threads = 16
+slave_parallel_threads = 16
+expire_logs_days = 5
+sync_binlog = 1
+log_slave_updates = ON
+{% endif %}
+
+[mariadb-10.1]

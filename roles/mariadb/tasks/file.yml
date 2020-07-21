@@ -1,0 +1,33 @@
+---
+- name: Setting MariaDB my.cnf File
+  template: src=my.cnf dest=/etc/my.cnf
+  when: ansible_fqdn in groups['mariadb']
+
+- name: Setting MariaDB server.cnf File
+  template: src=server.cnf dest=/etc/my.cnf.d/server.cnf
+  when: ansible_fqdn in groups['mariadb']
+  notify:
+    - restart mysql
+
+- name: Create Temp MariaDB Directory
+  file: path=/tmp/mysql-install state=directory
+
+- name: Copy HAproxy health check script for MySQL Replication
+  template: src=mysqlchk.sh dest=/usr/share/mysql/mysqlchk.sh mode=0755
+  when: mariadb_ha and ansible_fqdn in groups['mariadb']
+
+- name: Copy xinetd config for MySQL health check
+  copy: src=mysqlchk dest=/etc/xinetd.d/mysqlchk mode=0600
+  when: mariadb_ha and ansible_fqdn in groups['mariadb']
+  notify:
+    - restart xinetd
+
+- name: Setting replication-manager config File
+  template: src=config.toml dest=/etc/replication-manager/config.toml
+  when: mariadb_ha and ansible_fqdn in groups['replication_manager']
+
+- name: Setting replication-manager init Script
+  template: src=replication-manager dest=/etc/rc.d/init.d/replication-manager mode=0755
+  when: mariadb_ha and ansible_fqdn in groups['replication_manager']
+  notify:
+    - restart replication-manager

@@ -1,0 +1,38 @@
+---
+
+- name: Check status of Slave
+  mysql_replication: 
+    mode=getslave 
+    login_user={{ mariadb_info.root_user }} 
+    login_password={{ mariadb_info.root_password }}
+  ignore_errors: true
+  register: slave_status
+  when: ansible_fqdn in groups['mariadb'] and ansible_fqdn != groups['mariadb'][0]
+
+- name: Stop replication
+  mysql_replication: 
+    mode=stopslave 
+    login_user={{ mariadb_info.root_user }} 
+    login_password={{ mariadb_info.root_password }}
+  when: >
+    ansible_fqdn in groups['mariadb'] and ansible_fqdn != groups['mariadb'][0]
+    and ((slave_status.Is_Slave is defined and not slave_status.Is_Slave) or (slave_status.Is_Slave is not defined and slave_status ))
+
+- name: Configure replication on the slave
+  mysql_replication:
+    mode: changemaster
+    master_host: "{{ groups['mariadb'][0] }}"
+    master_user: "{{ mariadb_info.rpluser }}"
+    master_password: "{{ mariadb_info.rpluser_password }}"
+    login_user: "{{ mariadb_info.root_user }}"
+    login_password: "{{ mariadb_info.root_password }}"
+  ignore_errors: True
+  when: >
+    ansible_fqdn in groups['mariadb'] and ansible_fqdn != groups['mariadb'][0]
+    and ((slave_status.Is_Slave is defined and not slave_status.Is_Slave) or (slave_status.Is_Slave is not defined and slave_status))
+
+- name: Start replication
+  mysql_replication: mode=startslave login_user={{ mariadb_info.root_user }} login_password={{ mariadb_info.root_password }}
+  when: >
+    ansible_fqdn in groups['mariadb'] and ansible_fqdn != groups['mariadb'][0]
+    and ((slave_status.Is_Slave is defined and not slave_status.Is_Slave) or (slave_status.Is_Slave is not defined and slave_status))

@@ -1,0 +1,14 @@
+---
+  - name: Add MariaDB YUM Repository
+    template: src={{ item }} dest=/etc/yum.repos.d/{{ item }} mode=0644
+    with_items:
+      - MariaDB.repo
+#  - name: Update Yum Repository 
+#    yum:
+#      update_cache: yes
+#      name: '*'
+#      state: latest
+
+  - name: Update Yum Repository
+    shell: yum clean all ; 
+#    shell: yum clean all ; yum check-update ; true

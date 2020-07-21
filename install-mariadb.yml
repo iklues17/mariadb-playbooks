@@ -1,0 +1,12 @@
+---
+# Install mysql
+
+- hosts: mariadb:replication_manager
+  user: root
+  max_fail_percentage: 0
+
+  vars_files:
+    - group_vars/mariadb.yml
+
+  roles:
+    - { role: mariadb }
