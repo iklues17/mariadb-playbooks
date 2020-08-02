@@ -10,3 +10,8 @@
   with_items:
     - replication-manager
   when: mariadb_ha
+
+- name: Remove directories
+  file:
+    dest: /var/lib/mysql
+    state: absent
