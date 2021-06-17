@@ -22,3 +22,7 @@
   with_items:
     - replication-manager
   when: ansible_fqdn in groups['replication_manager']
+
+- name: Just force systemd to reread configs
+  systemd:
+    daemon_reload: yes
